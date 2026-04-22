@@ -28,14 +28,23 @@ lookback_years = st.sidebar.slider("Historical Lookback (Years)", 2, 10, 5)
 def get_data(ticker, years):
     try:
         tk = yf.Ticker(ticker)
-        hist = tk.history(period=f"{years}y")
+        # Use a longer period to ensure we get enough data for the MA_200
+        hist = tk.history(period=f"{years+1}y") 
         info = tk.info
-        eps = info.get('trailingEps')
-        if not eps or hist.empty:
+        
+        if hist.empty:
             return None, None
+            
+        # Fallback logic: If 'trailingPE' is missing from info, calculate it manually
+        eps = info.get('trailingEps')
+        if not eps:
+            # If EPS is missing, we can't do P/E analysis
+            return None, None
+            
         hist['Proxy_PE'] = hist['Close'] / eps
         return hist, info
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         return None, None
 
 data, info = get_data(ticker_symbol, lookback_years)
